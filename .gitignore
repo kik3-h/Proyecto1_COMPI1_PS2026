@@ -1,0 +1,21 @@
+# Archivos locales de configuración
+local.properties
+
+# Carpetas de compilación generadas automáticamente
+build/
+app/build/
+.gradle/
+
+# Archivos de Android Studio
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Archivos compilados de Java/Kotlin
+*.class
+*.apk
+*.dex
+
+.kotlin/
+

@@ -1,0 +1,521 @@
+package com.usac.pkmforms.compilador.parser;
+
+import com.usac.pkmforms.compilador.ast.nodos.Aritmetica;
+import com.usac.pkmforms.compilador.ast.nodos.AsignacionVar;
+import com.usac.pkmforms.compilador.ast.nodos.DeclaracionVar;
+import com.usac.pkmforms.compilador.ast.nodos.DoWhile;
+import com.usac.pkmforms.compilador.ast.nodos.ForClasico;
+import com.usac.pkmforms.compilador.ast.nodos.ForRango;
+import com.usac.pkmforms.compilador.ast.nodos.Identificador;
+import com.usac.pkmforms.compilador.ast.nodos.IfElse;
+import com.usac.pkmforms.compilador.ast.nodos.InvocacionDrawPreguntaEspecial;
+import com.usac.pkmforms.compilador.ast.nodos.InvocacionPokemon;
+import com.usac.pkmforms.compilador.ast.nodos.Literal;
+import com.usac.pkmforms.compilador.ast.nodos.Logica;
+import com.usac.pkmforms.compilador.ast.nodos.NodoAST;
+import com.usac.pkmforms.compilador.ast.nodos.PreguntaAbierta;
+import com.usac.pkmforms.compilador.ast.nodos.PreguntaDesplegable;
+import com.usac.pkmforms.compilador.ast.nodos.PreguntaSeleccionMultiple;
+import com.usac.pkmforms.compilador.ast.nodos.PreguntaSeleccionUnica;
+import com.usac.pkmforms.compilador.ast.nodos.Relacional;
+import com.usac.pkmforms.compilador.ast.nodos.Seccion;
+import com.usac.pkmforms.compilador.ast.nodos.Tabla;
+import com.usac.pkmforms.compilador.ast.nodos.Texto;
+import com.usac.pkmforms.compilador.ast.nodos.While;
+import com.usac.pkmforms.utilidades.manejador_errores.ErrorAnalisis;
+import java_cup.runtime.Symbol;
+
+parser code {:
+    public static final java.util.List<ErrorAnalisis> listaErroresSintacticos = new java.util.ArrayList<>();
+
+    @Override
+    public void syntax_error(Symbol tokenActual) {
+        String lexema = "EOF";
+        int linea = 0;
+        int columna = 0;
+
+        if (tokenActual != null) {
+            linea = tokenActual.left;
+            columna = tokenActual.right;
+            if (tokenActual.value != null) {
+                lexema = tokenActual.value.toString();
+            } else {
+                lexema = String.valueOf(tokenActual.sym);
+            }
+        }
+
+        listaErroresSintacticos.add(
+            new ErrorAnalisis(
+                lexema,
+                linea,
+                columna,
+                "Sintáctico",
+                "Error cerca de '" + lexema + "'"
+            )
+        );
+    }
+
+    @Override
+    public void unrecovered_syntax_error(Symbol tokenActual) {
+        syntax_error(tokenActual);
+        done_parsing();
+    }
+:};
+
+action code {:
+    private java.util.Map nuevoMapa() {
+        return new java.util.LinkedHashMap();
+    }
+
+    private java.util.Map agregarAtributo(java.util.Map mapa, String clave, Object valor) {
+        mapa.put(clave, valor);
+        return mapa;
+    }
+
+    private java.util.AbstractMap.SimpleEntry par(String clave, Object valor) {
+        return new java.util.AbstractMap.SimpleEntry(clave, valor);
+    }
+
+    private java.util.List nuevaLista() {
+        return new java.util.ArrayList();
+    }
+
+    private java.util.List agregarLista(java.util.List lista, Object valor) {
+        lista.add(valor);
+        return lista;
+    }
+:};
+
+terminal TIPO_NUMBER, TIPO_STRING, TIPO_SPECIAL;
+terminal SECTION, TABLE, TEXT, OPEN_QUESTION, DROP_QUESTION, SELECT_QUESTION, MULTIPLE_QUESTION;
+terminal IF, ELSE, WHILE, DO, FOR, IN, DRAW, WHO_IS_THAT_POKEMON;
+
+terminal WIDTH, HEIGHT, POINT_X, POINT_Y, ORIENTATION, VERTICAL, HORIZONTAL;
+terminal ELEMENTS, STYLES, CONTENT, LABEL, OPTIONS, CORRECT;
+terminal COLOR, BACKGROUND_COLOR, FONT_FAMILY, TEXT_SIZE, BORDER;
+terminal MONO, SANS_SERIF, CURSIVE, LINE, DOTTED, DOUBLE;
+
+terminal MAS, MENOS, POR, DIV, POTENCIA, MODULO;
+terminal MAYOR, MENOR, MAYOR_IGUAL, MENOR_IGUAL, IGUAL_IGUAL, DIFERENTE;
+terminal OR, AND, NOT;
+terminal UMINUS;
+
+terminal PAREN_ABRE, PAREN_CIERRA, LLAVE_ABRE, LLAVE_CIERRA, CORCHETE_ABRE, CORCHETE_CIERRA;
+terminal COMA, IGUAL, COMODIN, DOS_PUNTOS, PUNTO_COMA, RANGO, PUNTO;
+
+terminal Integer ENTERO;
+terminal Double DECIMAL;
+terminal String CADENA, EMOJI, COLOR_HEX, COLOR_RGB, COLOR_HSL, COLOR_BASE, IDENTIFICADOR;
+
+non terminal java.util.List programa, lista_sentencias, bloque_sentencias, bloque_else;
+non terminal java.util.List lista_componentes, lista_expresiones;
+non terminal java.util.Map lista_atributos_seccion, lista_atributos_tabla, lista_atributos_texto;
+non terminal java.util.Map lista_atributos_pregunta, lista_estilos;
+non terminal java.util.AbstractMap.SimpleEntry atributo_seccion, atributo_tabla, atributo_texto;
+non terminal java.util.AbstractMap.SimpleEntry atributo_pregunta, atributo_estilo;
+
+non terminal NodoAST sentencia, declaracion_variable, asignacion_variable;
+non terminal NodoAST componente_visual, estructura_control;
+non terminal NodoAST estructura_if, estructura_while, estructura_do_while, estructura_for_clasico, estructura_for_rango;
+non terminal NodoAST asignacion_for;
+non terminal NodoAST seccion, tabla, texto, pregunta, pregunta_abierta, pregunta_desplegable, pregunta_seleccion_unica, pregunta_seleccion_multiple;
+non terminal NodoAST invocacion_pokemon, invocacion_draw, expresion, literal, valor_orientacion, tipo_borde;
+non terminal String tipo_variable;
+
+precedence left OR;
+precedence left AND;
+precedence right NOT;
+precedence nonassoc MAYOR, MENOR, MAYOR_IGUAL, MENOR_IGUAL, IGUAL_IGUAL, DIFERENTE;
+precedence left MAS, MENOS;
+precedence left POR, DIV;
+precedence right POTENCIA, MODULO;
+precedence right UMINUS;
+
+start with programa;
+
+programa ::=
+    lista_sentencias:ls
+    {: RESULT = ls; :}
+;
+
+lista_sentencias ::=
+    lista_sentencias:ls sentencia:s
+    {: RESULT = agregarLista(ls, s); :}
+  | sentencia:s
+    {: java.util.List lista = nuevaLista(); lista.add(s); RESULT = lista; :}
+;
+
+bloque_sentencias ::=
+    lista_sentencias:ls
+    {: RESULT = ls; :}
+  |
+    {: RESULT = nuevaLista(); :}
+;
+
+sentencia ::=
+    declaracion_variable:d
+    {: RESULT = d; :}
+  | asignacion_variable:a
+    {: RESULT = a; :}
+  | invocacion_draw:d
+    {: RESULT = d; :}
+  | invocacion_pokemon:ip
+    {: RESULT = ip; :}
+  | componente_visual:c
+    {: RESULT = c; :}
+  | estructura_control:e
+    {: RESULT = e; :}
+;
+
+declaracion_variable ::=
+    tipo_variable:t IDENTIFICADOR:n
+    {: RESULT = new DeclaracionVar(t, n, null); :}
+  | tipo_variable:t IDENTIFICADOR:n IGUAL expresion:v
+    {: RESULT = new DeclaracionVar(t, n, v); :}
+  | tipo_variable:t IDENTIFICADOR:n IGUAL componente_visual:v
+    {: RESULT = new DeclaracionVar(t, n, v); :}
+;
+
+tipo_variable ::=
+    TIPO_NUMBER
+    {: RESULT = "number"; :}
+  | TIPO_STRING
+    {: RESULT = "string"; :}
+  | TIPO_SPECIAL
+    {: RESULT = "special"; :}
+;
+
+asignacion_variable ::=
+    IDENTIFICADOR:n IGUAL expresion:v
+    {: RESULT = new AsignacionVar(n, v); :}
+;
+
+componente_visual ::=
+    seccion:s
+    {: RESULT = s; :}
+  | tabla:t
+    {: RESULT = t; :}
+  | texto:tx
+    {: RESULT = tx; :}
+  | pregunta:p
+    {: RESULT = p; :}
+;
+
+pregunta ::=
+    pregunta_abierta:p
+    {: RESULT = p; :}
+  | pregunta_desplegable:p
+    {: RESULT = p; :}
+  | pregunta_seleccion_unica:p
+    {: RESULT = p; :}
+  | pregunta_seleccion_multiple:p
+    {: RESULT = p; :}
+;
+
+estructura_control ::=
+    estructura_if:e
+    {: RESULT = e; :}
+  | estructura_while:e
+    {: RESULT = e; :}
+  | estructura_do_while:e
+    {: RESULT = e; :}
+  | estructura_for_clasico:e
+    {: RESULT = e; :}
+  | estructura_for_rango:e
+    {: RESULT = e; :}
+;
+
+estructura_if ::=
+    IF PAREN_ABRE expresion:c PAREN_CIERRA LLAVE_ABRE bloque_sentencias:tv LLAVE_CIERRA bloque_else:tf
+    {: RESULT = new IfElse(c, tv, tf); :}
+;
+
+bloque_else ::=
+    ELSE LLAVE_ABRE bloque_sentencias:bl LLAVE_CIERRA
+    {: RESULT = bl; :}
+  |
+    {: RESULT = nuevaLista(); :}
+;
+
+estructura_while ::=
+    WHILE PAREN_ABRE expresion:c PAREN_CIERRA LLAVE_ABRE bloque_sentencias:b LLAVE_CIERRA
+    {: RESULT = new While(c, b); :}
+;
+
+estructura_do_while ::=
+    DO LLAVE_ABRE bloque_sentencias:b LLAVE_CIERRA WHILE PAREN_ABRE expresion:c PAREN_CIERRA
+    {: RESULT = new DoWhile(b, c); :}
+;
+
+asignacion_for ::=
+    IDENTIFICADOR:n IGUAL expresion:v
+    {: RESULT = new AsignacionVar(n, v); :}
+;
+
+estructura_for_clasico ::=
+    FOR PAREN_ABRE asignacion_for:i PUNTO_COMA expresion:c PUNTO_COMA asignacion_for:a PAREN_CIERRA LLAVE_ABRE bloque_sentencias:b LLAVE_CIERRA
+    {: RESULT = new ForClasico(i, c, a, b); :}
+;
+
+estructura_for_rango ::=
+    FOR PAREN_ABRE IDENTIFICADOR:n IN expresion:ini RANGO expresion:fin PAREN_CIERRA LLAVE_ABRE bloque_sentencias:b LLAVE_CIERRA
+    {: RESULT = new ForRango(n, ini, fin, b); :}
+;
+
+seccion ::=
+    SECTION CORCHETE_ABRE lista_atributos_seccion:a CORCHETE_CIERRA
+    {: RESULT = new Seccion(a); :}
+;
+
+tabla ::=
+    TABLE CORCHETE_ABRE lista_atributos_tabla:a CORCHETE_CIERRA
+    {: RESULT = new Tabla(a); :}
+;
+
+texto ::=
+    TEXT CORCHETE_ABRE lista_atributos_texto:a CORCHETE_CIERRA
+    {: RESULT = new Texto(a); :}
+;
+
+pregunta_abierta ::=
+    OPEN_QUESTION CORCHETE_ABRE lista_atributos_pregunta:a CORCHETE_CIERRA
+    {: RESULT = new PreguntaAbierta(a); :}
+;
+
+pregunta_desplegable ::=
+    DROP_QUESTION CORCHETE_ABRE lista_atributos_pregunta:a CORCHETE_CIERRA
+    {: RESULT = new PreguntaDesplegable(a); :}
+;
+
+pregunta_seleccion_unica ::=
+    SELECT_QUESTION CORCHETE_ABRE lista_atributos_pregunta:a CORCHETE_CIERRA
+    {: RESULT = new PreguntaSeleccionUnica(a); :}
+;
+
+pregunta_seleccion_multiple ::=
+    MULTIPLE_QUESTION CORCHETE_ABRE lista_atributos_pregunta:a CORCHETE_CIERRA
+    {: RESULT = new PreguntaSeleccionMultiple(a); :}
+;
+
+lista_atributos_seccion ::=
+    lista_atributos_seccion:la COMA atributo_seccion:a
+    {: RESULT = agregarAtributo(la, (String) a.getKey(), a.getValue()); :}
+  | atributo_seccion:a
+    {: java.util.Map mapa = nuevoMapa(); mapa.put((String) a.getKey(), a.getValue()); RESULT = mapa; :}
+;
+
+atributo_seccion ::=
+    WIDTH DOS_PUNTOS expresion:v
+    {: RESULT = par("width", v); :}
+  | HEIGHT DOS_PUNTOS expresion:v
+    {: RESULT = par("height", v); :}
+  | POINT_X DOS_PUNTOS expresion:v
+    {: RESULT = par("pointX", v); :}
+  | POINT_Y DOS_PUNTOS expresion:v
+    {: RESULT = par("pointY", v); :}
+  | ORIENTATION DOS_PUNTOS valor_orientacion:v
+    {: RESULT = par("orientation", v); :}
+  | ELEMENTS DOS_PUNTOS LLAVE_ABRE lista_componentes:v LLAVE_CIERRA
+    {: RESULT = par("elements", v); :}
+  | STYLES CORCHETE_ABRE lista_estilos:v CORCHETE_CIERRA
+    {: RESULT = par("styles", v); :}
+;
+
+lista_atributos_tabla ::=
+    lista_atributos_tabla:la COMA atributo_tabla:a
+    {: RESULT = agregarAtributo(la, (String) a.getKey(), a.getValue()); :}
+  | atributo_tabla:a
+    {: java.util.Map mapa = nuevoMapa(); mapa.put((String) a.getKey(), a.getValue()); RESULT = mapa; :}
+;
+
+atributo_tabla ::=
+    WIDTH DOS_PUNTOS expresion:v
+    {: RESULT = par("width", v); :}
+  | HEIGHT DOS_PUNTOS expresion:v
+    {: RESULT = par("height", v); :}
+  | POINT_X DOS_PUNTOS expresion:v
+    {: RESULT = par("pointX", v); :}
+  | POINT_Y DOS_PUNTOS expresion:v
+    {: RESULT = par("pointY", v); :}
+  | ELEMENTS DOS_PUNTOS LLAVE_ABRE lista_componentes:v LLAVE_CIERRA
+    {: RESULT = par("elements", v); :}
+  | STYLES CORCHETE_ABRE lista_estilos:v CORCHETE_CIERRA
+    {: RESULT = par("styles", v); :}
+;
+
+lista_atributos_texto ::=
+    lista_atributos_texto:la COMA atributo_texto:a
+    {: RESULT = agregarAtributo(la, (String) a.getKey(), a.getValue()); :}
+  | atributo_texto:a
+    {: java.util.Map mapa = nuevoMapa(); mapa.put((String) a.getKey(), a.getValue()); RESULT = mapa; :}
+;
+
+atributo_texto ::=
+    WIDTH DOS_PUNTOS expresion:v
+    {: RESULT = par("width", v); :}
+  | HEIGHT DOS_PUNTOS expresion:v
+    {: RESULT = par("height", v); :}
+  | CONTENT DOS_PUNTOS expresion:v
+    {: RESULT = par("content", v); :}
+  | STYLES CORCHETE_ABRE lista_estilos:v CORCHETE_CIERRA
+    {: RESULT = par("styles", v); :}
+;
+
+lista_atributos_pregunta ::=
+    lista_atributos_pregunta:la COMA atributo_pregunta:a
+    {: RESULT = agregarAtributo(la, (String) a.getKey(), a.getValue()); :}
+  | atributo_pregunta:a
+    {: java.util.Map mapa = nuevoMapa(); mapa.put((String) a.getKey(), a.getValue()); RESULT = mapa; :}
+;
+
+atributo_pregunta ::=
+    WIDTH DOS_PUNTOS expresion:v
+    {: RESULT = par("width", v); :}
+  | HEIGHT DOS_PUNTOS expresion:v
+    {: RESULT = par("height", v); :}
+  | LABEL DOS_PUNTOS expresion:v
+    {: RESULT = par("label", v); :}
+  | OPTIONS DOS_PUNTOS LLAVE_ABRE lista_expresiones:v LLAVE_CIERRA
+    {: RESULT = par("options", v); :}
+  | CORRECT DOS_PUNTOS expresion:v
+    {: RESULT = par("correct", v); :}
+  | CORRECT DOS_PUNTOS LLAVE_ABRE lista_expresiones:v LLAVE_CIERRA
+    {: RESULT = par("correct", v); :}
+  | STYLES CORCHETE_ABRE lista_estilos:v CORCHETE_CIERRA
+    {: RESULT = par("styles", v); :}
+;
+
+lista_estilos ::=
+    lista_estilos:la COMA atributo_estilo:a
+    {: RESULT = agregarAtributo(la, (String) a.getKey(), a.getValue()); :}
+  | atributo_estilo:a
+    {: java.util.Map mapa = nuevoMapa(); mapa.put((String) a.getKey(), a.getValue()); RESULT = mapa; :}
+;
+
+atributo_estilo ::=
+    COLOR DOS_PUNTOS expresion:v
+    {: RESULT = par("color", v); :}
+  | BACKGROUND_COLOR DOS_PUNTOS expresion:v
+    {: RESULT = par("background color", v); :}
+  | FONT_FAMILY DOS_PUNTOS expresion:v
+    {: RESULT = par("font family", v); :}
+  | TEXT_SIZE DOS_PUNTOS expresion:v
+    {: RESULT = par("text size", v); :}
+  | BORDER DOS_PUNTOS PAREN_ABRE expresion:g COMA tipo_borde:t COMA expresion:c PAREN_CIERRA
+    {: java.util.List valor = nuevaLista(); valor.add(g); valor.add(t); valor.add(c); RESULT = par("border", valor); :}
+;
+
+tipo_borde ::=
+    LINE
+    {: RESULT = new Literal("LINE"); :}
+  | DOTTED
+    {: RESULT = new Literal("DOTTED"); :}
+  | DOUBLE
+    {: RESULT = new Literal("DOUBLE"); :}
+;
+
+valor_orientacion ::=
+    VERTICAL
+    {: RESULT = new Literal("VERTICAL"); :}
+  | HORIZONTAL
+    {: RESULT = new Literal("HORIZONTAL"); :}
+;
+
+lista_componentes ::=
+    lista_componentes:lc COMA componente_visual:cv
+    {: RESULT = agregarLista(lc, cv); :}
+  | componente_visual:cv
+    {: java.util.List lista = nuevaLista(); lista.add(cv); RESULT = lista; :}
+  |
+    {: RESULT = nuevaLista(); :}
+;
+
+lista_expresiones ::=
+    lista_expresiones:le COMA expresion:e
+    {: RESULT = agregarLista(le, e); :}
+  | expresion:e
+    {: java.util.List lista = nuevaLista(); lista.add(e); RESULT = lista; :}
+  |
+    {: RESULT = nuevaLista(); :}
+;
+
+invocacion_pokemon ::=
+    WHO_IS_THAT_POKEMON PAREN_ABRE expresion:t COMA expresion:ini COMA expresion:fin PAREN_CIERRA
+    {: RESULT = new InvocacionPokemon(t, ini, fin); :}
+;
+
+invocacion_draw ::=
+    IDENTIFICADOR:n PUNTO DRAW PAREN_ABRE lista_expresiones:p PAREN_CIERRA
+    {: RESULT = new InvocacionDrawPreguntaEspecial(n, p); :}
+;
+
+expresion ::=
+    expresion:i OR expresion:d
+    {: RESULT = new Logica("||", i, d); :}
+  | expresion:i AND expresion:d
+    {: RESULT = new Logica("&&", i, d); :}
+  | NOT expresion:d
+    {: RESULT = new Logica("!", d, null); :}
+  | expresion:i MAYOR expresion:d
+    {: RESULT = new Relacional(">", i, d); :}
+  | expresion:i MENOR expresion:d
+    {: RESULT = new Relacional("<", i, d); :}
+  | expresion:i MAYOR_IGUAL expresion:d
+    {: RESULT = new Relacional(">=", i, d); :}
+  | expresion:i MENOR_IGUAL expresion:d
+    {: RESULT = new Relacional("<=", i, d); :}
+  | expresion:i IGUAL_IGUAL expresion:d
+    {: RESULT = new Relacional("==", i, d); :}
+  | expresion:i DIFERENTE expresion:d
+    {: RESULT = new Relacional("!!", i, d); :}
+  | expresion:i MAS expresion:d
+    {: RESULT = new Aritmetica("+", i, d); :}
+  | expresion:i MENOS expresion:d
+    {: RESULT = new Aritmetica("-", i, d); :}
+  | expresion:i POR expresion:d
+    {: RESULT = new Aritmetica("*", i, d); :}
+  | expresion:i DIV expresion:d
+    {: RESULT = new Aritmetica("/", i, d); :}
+  | expresion:i POTENCIA expresion:d
+    {: RESULT = new Aritmetica("^", i, d); :}
+  | expresion:i MODULO expresion:d
+    {: RESULT = new Aritmetica("%", i, d); :}
+  | MENOS expresion:d
+    {: RESULT = new Aritmetica("NEG", new Literal(0), d); :}
+    %prec UMINUS
+  | PAREN_ABRE expresion:e PAREN_CIERRA
+    {: RESULT = e; :}
+  | literal:l
+    {: RESULT = l; :}
+  | IDENTIFICADOR:n
+    {: RESULT = new Identificador(n); :}
+  | invocacion_pokemon:i
+    {: RESULT = i; :}
+;
+
+literal ::=
+    ENTERO:v
+    {: RESULT = new Literal(v); :}
+  | DECIMAL:v
+    {: RESULT = new Literal(v); :}
+  | CADENA:v
+    {: RESULT = new Literal(v); :}
+  | EMOJI:v
+    {: RESULT = new Literal(v); :}
+  | COLOR_HEX:v
+    {: RESULT = new Literal(v); :}
+  | COLOR_RGB:v
+    {: RESULT = new Literal(v); :}
+  | COLOR_HSL:v
+    {: RESULT = new Literal(v); :}
+  | COLOR_BASE:v
+    {: RESULT = new Literal(v); :}
+  | MONO
+    {: RESULT = new Literal("MONO"); :}
+  | SANS_SERIF
+    {: RESULT = new Literal("SANS_SERIF"); :}
+  | CURSIVE
+    {: RESULT = new Literal("CURSIVE"); :}
+  | COMODIN
+    {: RESULT = new Literal("?"); :}
+;
