@@ -7,10 +7,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -19,9 +17,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -43,13 +45,16 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.usac.pkmforms.compilador.ast.nodos.NodoAST
 import com.usac.pkmforms.compilador.interprete.InterpretePkm
 import com.usac.pkmforms.compilador.lexer.LexerPkm
@@ -74,27 +79,36 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditorPantalla(
+    navController: NavController,
     onFormularioGenerado: (List<ComponenteFormulario>) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var codigoFuente by rememberSaveable { mutableStateOf("") }
+    var codigoFuente by rememberSaveable(stateSaver = TextFieldValue.Saver) {
+        mutableStateOf(TextFieldValue(""))
+    }
     var erroresAnalisis by remember { mutableStateOf<List<ErrorAnalisis>>(emptyList()) }
     var mostrarErrores by remember { mutableStateOf(false) }
 
     val estadoSnackBar = remember { SnackbarHostState() }
     val alcanceCoroutine = rememberCoroutineScope()
     val formularioRepository = remember(context) {
-        FormularioRepository(
-            AppDatabase.obtenerInstancia(context).formularioDao()
-        )
+        FormularioRepository(AppDatabase.obtenerInstancia(context).formularioDao())
     }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("PKM_FORMS - Editor de Código") }
+                title = { Text("PKM_FORMS_EH - Editor") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Volver"
+                        )
+                    }
+                }
             )
         },
         snackbarHost = { SnackbarHost(hostState = estadoSnackBar) }
@@ -114,7 +128,7 @@ fun EditorPantalla(
             ) {
                 Button(
                     onClick = {
-                        val resultado = ejecutarAnalisis(codigoFuente)
+                        val resultado = ejecutarAnalisis(codigoFuente.text)
                         if (resultado.errores.isNotEmpty()) {
                             erroresAnalisis = resultado.errores
                             mostrarErrores = true
@@ -133,11 +147,15 @@ fun EditorPantalla(
                 OutlinedButton(
                     onClick = {
                         val codigoPlantilla = plantillaBasePkm()
-                        codigoFuente = if (codigoFuente.isBlank()) {
+                        val nuevoContenido = if (codigoFuente.text.isBlank()) {
                             codigoPlantilla
                         } else {
-                            "${codigoFuente.trimEnd()}\n\n$codigoPlantilla"
+                            "${codigoFuente.text.trimEnd()}\n\n$codigoPlantilla"
                         }
+                        codigoFuente = TextFieldValue(
+                            text = nuevoContenido,
+                            selection = TextRange(nuevoContenido.length)
+                        )
                     }
                 ) {
                     Text("Insertar Plantilla")
@@ -145,11 +163,15 @@ fun EditorPantalla(
 
                 OutlinedButton(
                     onClick = {
-                        codigoFuente = if (codigoFuente.isBlank()) {
+                        val nuevoContenido = if (codigoFuente.text.isBlank()) {
                             "\"#FFFFFF\""
                         } else {
-                            "${codigoFuente.trimEnd()}\n\"#FFFFFF\""
+                            "${codigoFuente.text.trimEnd()}\n\"#FFFFFF\""
                         }
+                        codigoFuente = TextFieldValue(
+                            text = nuevoContenido,
+                            selection = TextRange(nuevoContenido.length)
+                        )
                     }
                 ) {
                     Text("Insertar Color")
@@ -157,7 +179,7 @@ fun EditorPantalla(
 
                 OutlinedButton(
                     onClick = {
-                        val resultado = ejecutarAnalisis(codigoFuente)
+                        val resultado = ejecutarAnalisis(codigoFuente.text)
                         if (resultado.errores.isNotEmpty()) {
                             erroresAnalisis = resultado.errores
                             mostrarErrores = true
@@ -174,8 +196,7 @@ fun EditorPantalla(
                             try {
                                 val fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
                                 val hora = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
-                                val stamp = LocalDateTime.now()
-                                    .format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+                                val stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
                                 val nombreArchivoBase = "formulario_$stamp"
 
                                 val metadatos = linkedMapOf(
@@ -211,9 +232,7 @@ fun EditorPantalla(
                                 }
                             } catch (exception: Exception) {
                                 launch(Dispatchers.Main) {
-                                    estadoSnackBar.showSnackbar(
-                                        "Error al guardar: ${exception.message.orEmpty()}"
-                                    )
+                                    estadoSnackBar.showSnackbar("Error al guardar: ${exception.message.orEmpty()}")
                                 }
                             }
                         }
@@ -224,48 +243,78 @@ fun EditorPantalla(
 
                 OutlinedButton(
                     onClick = {
-                        codigoFuente = ""
+                        codigoFuente = TextFieldValue("")
                     }
                 ) {
                     Text("Limpiar")
                 }
             }
 
-            Box(
+            val scrollSincronizado = rememberScrollState()
+            val totalLineas = maxOf(1, codigoFuente.text.count { it == '\n' } + 1)
+            val estiloCodigo = TextStyle(
+                color = Color.White,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 14.sp,
+                lineHeight = 20.sp
+            )
+
+            Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFF1E1E1E), RoundedCornerShape(12.dp))
+                    .background(Color(0xFF151515), RoundedCornerShape(12.dp))
                     .border(1.dp, Color(0xFF3A3A3A), RoundedCornerShape(12.dp))
-                    .padding(12.dp)
+                    .padding(10.dp)
+                    .verticalScroll(scrollSincronizado)
             ) {
-                val scrollEditor = rememberScrollState()
-                BasicTextField(
-                    value = codigoFuente,
-                    onValueChange = { codigoFuente = it },
+                Column(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(scrollEditor),
-                    textStyle = TextStyle(
-                        color = Color.White,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp
-                    ),
-                    cursorBrush = SolidColor(Color.White),
-                    visualTransformation = remember { ResaltadorSintaxisPkm() },
-                    decorationBox = { contenidoInterno ->
-                        if (codigoFuente.isBlank()) {
-                            Text(
-                                text = "Escribe aquí el código PKM_FORMS...",
-                                color = Color(0xFF9E9E9E),
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 14.sp
-                            )
-                        }
-                        contenidoInterno()
+                        .width(52.dp)
+                        .background(Color(0xFF1F1F1F), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    for (linea in 1..totalLineas) {
+                        Text(
+                            text = linea.toString(),
+                            color = Color(0xFF9E9E9E),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 12.sp,
+                            lineHeight = 20.sp
+                        )
                     }
-                )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .padding(start = 10.dp)
+                        .fillMaxWidth()
+                ) {
+                    if (codigoFuente.text.isBlank()) {
+                        Text(
+                            text = "Escribe aquí el código PKM_FORMS...",
+                            color = Color(0xFF9E9E9E),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 14.sp
+                        )
+                    }
+                    BasicTextField(
+                        value = codigoFuente,
+                        onValueChange = { codigoFuente = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = estiloCodigo,
+                        cursorBrush = SolidColor(Color.White),
+                        visualTransformation = remember { ResaltadorSintaxisPkm() }
+                    )
+                }
             }
+
+            val (lineaCursor, colCursor) = obtenerPosicionCursor(codigoFuente)
+            Text(
+                text = "Línea: $lineaCursor, Col: $colCursor",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color(0xFFBDBDBD),
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 
@@ -275,6 +324,23 @@ fun EditorPantalla(
             onCerrar = { mostrarErrores = false }
         )
     }
+}
+
+private fun obtenerPosicionCursor(valor: TextFieldValue): Pair<Int, Int> {
+    val texto = valor.text
+    val indiceCursor = valor.selection.start.coerceIn(0, texto.length)
+    var linea = 1
+    var ultimoSalto = -1
+
+    for (indice in 0 until indiceCursor) {
+        if (texto[indice] == '\n') {
+            linea += 1
+            ultimoSalto = indice
+        }
+    }
+
+    val columna = indiceCursor - ultimoSalto
+    return linea to columna
 }
 
 private data class ResultadoAnalisisUi(

@@ -337,6 +337,8 @@ atributo_tabla ::=
     {: RESULT = par("pointX", v); :}
   | POINT_Y DOS_PUNTOS expresion:v
     {: RESULT = par("pointY", v); :}
+  | ORIENTATION DOS_PUNTOS valor_orientacion:v
+    {: RESULT = par("orientation", v); :}
   | ELEMENTS DOS_PUNTOS LLAVE_ABRE lista_componentes:v LLAVE_CIERRA
     {: RESULT = par("elements", v); :}
   | STYLES CORCHETE_ABRE lista_estilos:v CORCHETE_CIERRA

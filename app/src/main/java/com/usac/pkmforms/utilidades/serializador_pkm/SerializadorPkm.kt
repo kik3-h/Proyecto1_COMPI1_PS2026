@@ -93,8 +93,12 @@ object SerializadorPkm {
         indent: Int,
         tabs: String
     ): String {
+        val orientation = when (tabla.orientation) {
+            OrientacionSeccion.VERTICAL -> "VERTICAL"
+            OrientacionSeccion.HORIZONTAL -> "HORIZONTAL"
+        }
         val contenido = StringBuilder()
-        contenido.append("$tabs<table=${fmt(tabla.width)},${fmt(tabla.height)},${fmt(tabla.pointX)},${fmt(tabla.pointY)}>")
+        contenido.append("$tabs<table=${fmt(tabla.width)},${fmt(tabla.height)},${fmt(tabla.pointX)},${fmt(tabla.pointY)},$orientation>")
         contenido.appendLine()
 
         serializarEstiloSiExiste(tabla.estilos, indent + 1)?.let {

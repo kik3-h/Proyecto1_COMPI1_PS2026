@@ -129,6 +129,7 @@ dependencies {
     val versionMoshi = "1.15.1"
     val versionGson = "2.11.0"
     val versionComposeBom = "2024.12.01"
+    val versionNavigation = "2.8.5"
 
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
@@ -139,6 +140,8 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.navigation:navigation-compose:$versionNavigation")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")

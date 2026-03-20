@@ -16,12 +16,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -29,6 +35,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,6 +53,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.usac.pkmforms.domain.modelo.formulario.BordeFormulario
 import com.usac.pkmforms.domain.modelo.formulario.ComponenteFormulario
 import com.usac.pkmforms.domain.modelo.formulario.EstiloFormulario
@@ -66,8 +75,8 @@ import kotlin.math.max
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RenderizadorPantalla(
+    navController: NavController,
     componentes: List<ComponenteFormulario>,
-    onVolverEditor: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val respuestasAbiertas = remember { mutableStateMapOf<String, String>() }
@@ -81,13 +90,13 @@ fun RenderizadorPantalla(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Visor de Formulario") },
-                actions = {
-                    Button(
-                        onClick = onVolverEditor,
-                        modifier = Modifier.padding(end = 12.dp)
-                    ) {
-                        Text("Volver al editor")
+                title = { Text("PKM_FORMS_EH") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Volver"
+                        )
                     }
                 }
             )
@@ -128,7 +137,14 @@ fun RenderizadorPantalla(
                         respuestasMultiple = respuestasMultiple,
                         respuestasDrop = respuestasDrop
                     )
-                }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
             ) {
                 Text("Enviar formulario")
             }
@@ -240,44 +256,61 @@ private fun RenderSeccion(
     respuestasDrop: MutableMap<String, Int>
 ) {
     val estiloFinal = fusionarEstilos(estiloHeredado, seccion.estilos)
-    val modificadorBase = Modifier
-        .fillMaxWidth()
-        .then(aplicarDimensiones(width = seccion.width, height = seccion.height))
-        .then(aplicarEstilosContenedor(estiloFinal))
-        .padding(8.dp)
-
-    if (seccion.orientation == OrientacionSeccion.HORIZONTAL) {
-        Row(
-            modifier = modificadorBase,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            seccion.elements.forEachIndexed { indice, componenteHijo ->
-                RenderComponente(
-                    componente = componenteHijo,
-                    clave = "$clave-h-$indice",
-                    estiloHeredado = estiloFinal,
-                    respuestasAbiertas = respuestasAbiertas,
-                    respuestasUnica = respuestasUnica,
-                    respuestasMultiple = respuestasMultiple,
-                    respuestasDrop = respuestasDrop
-                )
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(aplicarDimensiones(width = seccion.width, height = seccion.height)),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(
+            width = 2.dp,
+            color = colorDesdeCadena(estiloFinal.colorTexto) ?: MaterialTheme.colorScheme.outline
+        ),
+        colors = CardDefaults.cardColors(
+            containerColor = colorDesdeCadena(estiloFinal.colorFondo)
+                ?: MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        if (seccion.orientation == OrientacionSeccion.HORIZONTAL) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(aplicarEstilosContenedor(estiloFinal))
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                seccion.elements.forEachIndexed { indice, componenteHijo ->
+                    Box(modifier = Modifier.weight(1f)) {
+                        RenderComponente(
+                            componente = componenteHijo,
+                            clave = "$clave-h-$indice",
+                            estiloHeredado = estiloFinal,
+                            respuestasAbiertas = respuestasAbiertas,
+                            respuestasUnica = respuestasUnica,
+                            respuestasMultiple = respuestasMultiple,
+                            respuestasDrop = respuestasDrop
+                        )
+                    }
+                }
             }
-        }
-    } else {
-        Column(
-            modifier = modificadorBase,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            seccion.elements.forEachIndexed { indice, componenteHijo ->
-                RenderComponente(
-                    componente = componenteHijo,
-                    clave = "$clave-v-$indice",
-                    estiloHeredado = estiloFinal,
-                    respuestasAbiertas = respuestasAbiertas,
-                    respuestasUnica = respuestasUnica,
-                    respuestasMultiple = respuestasMultiple,
-                    respuestasDrop = respuestasDrop
-                )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(aplicarEstilosContenedor(estiloFinal))
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                seccion.elements.forEachIndexed { indice, componenteHijo ->
+                    RenderComponente(
+                        componente = componenteHijo,
+                        clave = "$clave-v-$indice",
+                        estiloHeredado = estiloFinal,
+                        respuestasAbiertas = respuestasAbiertas,
+                        respuestasUnica = respuestasUnica,
+                        respuestasMultiple = respuestasMultiple,
+                        respuestasDrop = respuestasDrop
+                    )
+                }
             }
         }
     }
@@ -294,30 +327,73 @@ private fun RenderTabla(
     respuestasDrop: MutableMap<String, Int>
 ) {
     val estiloFinal = fusionarEstilos(estiloHeredado, tabla.estilos)
-    Column(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .then(aplicarDimensiones(width = tabla.width, height = tabla.height))
-            .then(aplicarEstilosContenedor(estiloFinal))
-            .padding(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .then(aplicarDimensiones(width = tabla.width, height = tabla.height)),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(
+            width = 2.dp,
+            color = colorDesdeCadena(estiloFinal.colorTexto) ?: MaterialTheme.colorScheme.outline
+        ),
+        colors = CardDefaults.cardColors(
+            containerColor = colorDesdeCadena(estiloFinal.colorFondo)
+                ?: MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
-        tabla.elements.forEachIndexed { indice, componente ->
-            Box(
+        if (tabla.orientation == OrientacionSeccion.HORIZONTAL) {
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, Color(0x33555555), RoundedCornerShape(4.dp))
-                    .padding(6.dp)
+                    .then(aplicarEstilosContenedor(estiloFinal))
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                RenderComponente(
-                    componente = componente,
-                    clave = "$clave-table-$indice",
-                    estiloHeredado = estiloFinal,
-                    respuestasAbiertas = respuestasAbiertas,
-                    respuestasUnica = respuestasUnica,
-                    respuestasMultiple = respuestasMultiple,
-                    respuestasDrop = respuestasDrop
-                )
+                tabla.elements.forEachIndexed { indice, componente ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .border(2.dp, Color(0x33555555), RoundedCornerShape(8.dp))
+                            .padding(8.dp)
+                    ) {
+                        RenderComponente(
+                            componente = componente,
+                            clave = "$clave-table-h-$indice",
+                            estiloHeredado = estiloFinal,
+                            respuestasAbiertas = respuestasAbiertas,
+                            respuestasUnica = respuestasUnica,
+                            respuestasMultiple = respuestasMultiple,
+                            respuestasDrop = respuestasDrop
+                        )
+                    }
+                }
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(aplicarEstilosContenedor(estiloFinal))
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                tabla.elements.forEachIndexed { indice, componente ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(2.dp, Color(0x33555555), RoundedCornerShape(8.dp))
+                            .padding(8.dp)
+                    ) {
+                        RenderComponente(
+                            componente = componente,
+                            clave = "$clave-table-v-$indice",
+                            estiloHeredado = estiloFinal,
+                            respuestasAbiertas = respuestasAbiertas,
+                            respuestasUnica = respuestasUnica,
+                            respuestasMultiple = respuestasMultiple,
+                            respuestasDrop = respuestasDrop
+                        )
+                    }
+                }
             }
         }
     }
@@ -419,10 +495,18 @@ private fun RenderPreguntaSeleccionUnica(
                     selected = respuestasUnica[clave] == indice,
                     onClick = { respuestasUnica[clave] = indice }
                 )
-                Text(
-                    text = opcion,
-                    style = TextStyle(color = colorTexto, fontSize = textSizeDesdeEstilo(estiloFinal))
-                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                ) {
+                    Text(
+                        text = opcion,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                        style = TextStyle(color = colorTexto, fontSize = textSizeDesdeEstilo(estiloFinal))
+                    )
+                }
             }
         }
     }
@@ -486,10 +570,18 @@ private fun RenderPreguntaSeleccionMultiple(
                         }
                     }
                 )
-                Text(
-                    text = opcion,
-                    style = TextStyle(color = colorTexto, fontSize = textSizeDesdeEstilo(estiloFinal))
-                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                ) {
+                    Text(
+                        text = opcion,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                        style = TextStyle(color = colorTexto, fontSize = textSizeDesdeEstilo(estiloFinal))
+                    )
+                }
             }
         }
     }
