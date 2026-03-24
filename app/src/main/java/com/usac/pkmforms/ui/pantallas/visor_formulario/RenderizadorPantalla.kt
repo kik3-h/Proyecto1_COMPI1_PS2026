@@ -72,6 +72,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.max
 
+fun String.procesarEmojis(): String {
+    var txt = this.replace("@[:smile:]", "😊").replace("@[:heart:]", "❤️").replace("@[:cat:]", "🐱")
+    txt = txt.replace("@[:)]", "🙂").replace("@[:(]", "☹️").replace("@[:serious:]", "😐")
+    txt = txt.replace("@[<3]", "❤️").replace("@[<<<333]", "💖").replace("@[:||||]", "📊")
+    txt = txt.replace(Regex("@\\[:star:(\\d+):\\]")) { match -> "⭐".repeat(match.groupValues[1].toIntOrNull() ?: 1) }
+    return txt
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RenderizadorPantalla(
@@ -108,7 +116,7 @@ fun RenderizadorPantalla(
                 .padding(paddingValues)
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (componentes.isEmpty()) {
                 Text(
@@ -258,6 +266,7 @@ private fun RenderSeccion(
     val estiloFinal = fusionarEstilos(estiloHeredado, seccion.estilos)
     Card(
         modifier = Modifier
+            .padding(8.dp)
             .fillMaxWidth()
             .then(aplicarDimensiones(width = seccion.width, height = seccion.height)),
         shape = RoundedCornerShape(12.dp),
@@ -329,6 +338,7 @@ private fun RenderTabla(
     val estiloFinal = fusionarEstilos(estiloHeredado, tabla.estilos)
     Card(
         modifier = Modifier
+            .padding(8.dp)
             .fillMaxWidth()
             .then(aplicarDimensiones(width = tabla.width, height = tabla.height)),
         shape = RoundedCornerShape(12.dp),
@@ -406,7 +416,7 @@ private fun RenderTexto(
 ) {
     val estiloFinal = fusionarEstilos(estiloHeredado, texto.estilos)
     Text(
-        text = texto.content,
+        text = texto.content.procesarEmojis(),
         modifier = Modifier
             .fillMaxWidth()
             .then(aplicarDimensiones(width = texto.width, height = texto.height))
@@ -429,6 +439,7 @@ private fun RenderPreguntaAbierta(
 
     Column(
         modifier = Modifier
+            .padding(8.dp)
             .fillMaxWidth()
             .then(aplicarDimensiones(width = pregunta.width, height = pregunta.height))
             .then(aplicarEstilosContenedor(estiloFinal))
@@ -436,7 +447,7 @@ private fun RenderPreguntaAbierta(
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Text(
-            text = pregunta.label,
+            text = pregunta.label.procesarEmojis(),
             style = textStyleDesdeEstilo(estiloFinal)
         )
         OutlinedTextField(
@@ -477,13 +488,14 @@ private fun RenderPreguntaSeleccionUnica(
 
     Column(
         modifier = Modifier
+            .padding(8.dp)
             .fillMaxWidth()
             .then(aplicarDimensiones(width = pregunta.width, height = pregunta.height))
             .then(aplicarEstilosContenedor(estiloFinal))
             .padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Text(text = pregunta.label, style = textStyleDesdeEstilo(estiloFinal))
+        Text(text = pregunta.label.procesarEmojis(), style = textStyleDesdeEstilo(estiloFinal))
         opcionesDynamic.forEachIndexed { indice, opcion ->
             Row(
                 modifier = Modifier
@@ -538,13 +550,14 @@ private fun RenderPreguntaSeleccionMultiple(
 
     Column(
         modifier = Modifier
+            .padding(8.dp)
             .fillMaxWidth()
             .then(aplicarDimensiones(width = pregunta.width, height = pregunta.height))
             .then(aplicarEstilosContenedor(estiloFinal))
             .padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Text(text = pregunta.label, style = textStyleDesdeEstilo(estiloFinal))
+        Text(text = pregunta.label.procesarEmojis(), style = textStyleDesdeEstilo(estiloFinal))
         opcionesDynamic.forEachIndexed { indice, opcion ->
             val seleccionados = respuestasMultiple[clave].orEmpty()
             val marcado = seleccionados.contains(indice)
@@ -617,13 +630,14 @@ private fun RenderPreguntaDesplegable(
 
     Column(
         modifier = Modifier
+            .padding(8.dp)
             .fillMaxWidth()
             .then(aplicarDimensiones(width = pregunta.width, height = pregunta.height))
             .then(aplicarEstilosContenedor(estiloFinal))
             .padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Text(text = pregunta.label, style = textStyleDesdeEstilo(estiloFinal))
+        Text(text = pregunta.label.procesarEmojis(), style = textStyleDesdeEstilo(estiloFinal))
         Box {
             OutlinedTextField(
                 value = seleccionado,
