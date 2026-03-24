@@ -92,11 +92,6 @@ ColorHsl = "<"{NumeroColor}","{NumeroColor}","{NumeroColor}">"
 "label"                                       { return simbolo(SimbolosSintacticosPkm.LABEL); }
 "options"                                     { return simbolo(SimbolosSintacticosPkm.OPTIONS); }
 "correct"                                     { return simbolo(SimbolosSintacticosPkm.CORRECT); }
-"color"                                       { return simbolo(SimbolosSintacticosPkm.COLOR); }
-"background"{SeparadorAtributo}"color"        { return simbolo(SimbolosSintacticosPkm.BACKGROUND_COLOR); }
-"font"{SeparadorAtributo}"family"             { return simbolo(SimbolosSintacticosPkm.FONT_FAMILY); }
-"text"{SeparadorAtributo}"size"               { return simbolo(SimbolosSintacticosPkm.TEXT_SIZE); }
-"border"                                      { return simbolo(SimbolosSintacticosPkm.BORDER); }
 "MONO"                                        { return simbolo(SimbolosSintacticosPkm.MONO); }
 "SANS_SERIF"                                  { return simbolo(SimbolosSintacticosPkm.SANS_SERIF); }
 "CURSIVE"                                     { return simbolo(SimbolosSintacticosPkm.CURSIVE); }
@@ -136,6 +131,11 @@ ColorHsl = "<"{NumeroColor}","{NumeroColor}","{NumeroColor}">"
 
 {Decimal}                                     { return simbolo(SimbolosSintacticosPkm.DECIMAL, Double.valueOf(yytext())); }
 {Entero}                                      { return simbolo(SimbolosSintacticosPkm.ENTERO, Integer.valueOf(yytext())); }
+"\"color\""                                   { return simbolo(SimbolosSintacticosPkm.COLOR); }
+"\"background color\""                        { return simbolo(SimbolosSintacticosPkm.BACKGROUND_COLOR); }
+"\"font family\""                             { return simbolo(SimbolosSintacticosPkm.FONT_FAMILY); }
+"\"text size\""                               { return simbolo(SimbolosSintacticosPkm.TEXT_SIZE); }
+"\"border\""                                  { return simbolo(SimbolosSintacticosPkm.BORDER); }
 {Cadena}                                      { return simbolo(SimbolosSintacticosPkm.CADENA, yytext()); }
 
 {EmojiFeliz}                                  { return simbolo(SimbolosSintacticosPkm.EMOJI, yytext()); }

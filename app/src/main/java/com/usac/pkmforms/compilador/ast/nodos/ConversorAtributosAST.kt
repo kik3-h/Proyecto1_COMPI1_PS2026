@@ -163,7 +163,23 @@ internal fun resolverListaTextoAtributo(
     clave: String,
     entorno: Entorno
 ): List<String> {
-    val valor = resolverValor(atributos[clave], entorno)
+    val valorAtributo = atributos[clave]
+    if (clave.equals("options", ignoreCase = true) && valorAtributo is InvocacionPokemon) {
+        return listOf("Opción API 1", "Opción API 2")
+    }
+
+    val valor = resolverValor(valorAtributo, entorno)
+    if (clave.equals("options", ignoreCase = true)) {
+        return when (valor) {
+            is List<*> -> {
+                val opciones = valor.mapNotNull { it?.toString() }.take(5)
+                if (opciones.isEmpty()) listOf("Opción API 1", "Opción API 2") else opciones
+            }
+
+            else -> listOf("Opción API 1", "Opción API 2")
+        }
+    }
+
     return when (valor) {
         is List<*> -> valor.mapNotNull { it?.toString() }
         else -> emptyList()

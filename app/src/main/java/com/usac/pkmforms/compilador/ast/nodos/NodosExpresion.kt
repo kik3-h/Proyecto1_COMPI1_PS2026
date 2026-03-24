@@ -278,6 +278,10 @@ data class Literal(val valor: Any?) : NodoAST {
 
 data class Identificador(val nombre: String) : NodoAST {
     override fun validarSemantica(entorno: Entorno): Entorno.TipoVariablePkm {
+        if (nombre.equals("NUMBER", ignoreCase = true)) {
+            return Entorno.TipoVariablePkm.STRING
+        }
+
         val variable = entorno.obtenerVariable(nombre)
         if (variable == null) {
             entorno.registrarErrorSemantico(
@@ -290,6 +294,10 @@ data class Identificador(val nombre: String) : NodoAST {
     }
 
     override fun ejecutar(entorno: Entorno): Any? {
+        if (nombre.equals("NUMBER", ignoreCase = true)) {
+            return "NUMBER"
+        }
+
         val variable = entorno.obtenerVariable(nombre)
         if (variable == null) {
             entorno.registrarErrorSemantico(

@@ -84,6 +84,21 @@ action code {:
         lista.add(valor);
         return lista;
     }
+
+    private NodoAST invocacionPokemonOpciones(NodoAST inicio, NodoAST fin) {
+        return new InvocacionPokemon(new Literal("number"), inicio, fin);
+    }
+
+    private NodoAST construirColorTripleta(String abre, NodoAST primero, NodoAST segundo, NodoAST tercero, String cierra) {
+        NodoAST resultado = new Literal(abre);
+        resultado = new Aritmetica("+", resultado, primero);
+        resultado = new Aritmetica("+", resultado, new Literal(","));
+        resultado = new Aritmetica("+", resultado, segundo);
+        resultado = new Aritmetica("+", resultado, new Literal(","));
+        resultado = new Aritmetica("+", resultado, tercero);
+        resultado = new Aritmetica("+", resultado, new Literal(cierra));
+        return resultado;
+    }
 :};
 
 terminal TIPO_NUMBER, TIPO_STRING, TIPO_SPECIAL;
@@ -108,18 +123,18 @@ terminal Double DECIMAL;
 terminal String CADENA, EMOJI, COLOR_HEX, COLOR_RGB, COLOR_HSL, COLOR_BASE, IDENTIFICADOR;
 
 non terminal java.util.List programa, lista_sentencias, bloque_sentencias, bloque_else;
-non terminal java.util.List lista_componentes, lista_expresiones;
+non terminal java.util.List lista_componentes, lista_expresiones, lista_expresiones_no_vacia, lista_filas, fila_tabla, lista_celdas, tupla_borde;
 non terminal java.util.Map lista_atributos_seccion, lista_atributos_tabla, lista_atributos_texto;
 non terminal java.util.Map lista_atributos_pregunta, lista_estilos;
 non terminal java.util.AbstractMap.SimpleEntry atributo_seccion, atributo_tabla, atributo_texto;
-non terminal java.util.AbstractMap.SimpleEntry atributo_pregunta, atributo_estilo;
+non terminal java.util.AbstractMap.SimpleEntry atributo_pregunta, atributo_estilo, atributo_opciones, atributo_correct;
 
 non terminal NodoAST sentencia, declaracion_variable, asignacion_variable;
 non terminal NodoAST componente_visual, estructura_control;
 non terminal NodoAST estructura_if, estructura_while, estructura_do_while, estructura_for_clasico, estructura_for_rango;
 non terminal NodoAST asignacion_for;
 non terminal NodoAST seccion, tabla, texto, pregunta, pregunta_abierta, pregunta_desplegable, pregunta_seleccion_unica, pregunta_seleccion_multiple;
-non terminal NodoAST invocacion_pokemon, invocacion_draw, expresion, literal, valor_orientacion, tipo_borde;
+non terminal NodoAST invocacion_pokemon, expresion, literal, valor_orientacion, tipo_borde, componente, celda;
 non terminal String tipo_variable;
 
 precedence left OR;
@@ -157,8 +172,6 @@ sentencia ::=
     {: RESULT = d; :}
   | asignacion_variable:a
     {: RESULT = a; :}
-  | invocacion_draw:d
-    {: RESULT = d; :}
   | invocacion_pokemon:ip
     {: RESULT = ip; :}
   | componente_visual:c
@@ -199,6 +212,15 @@ componente_visual ::=
     {: RESULT = tx; :}
   | pregunta:p
     {: RESULT = p; :}
+  | IDENTIFICADOR:n PUNTO DRAW PAREN_ABRE lista_expresiones_no_vacia:p PAREN_CIERRA
+    {: RESULT = new InvocacionDrawPreguntaEspecial(n, p); :}
+  | IDENTIFICADOR:n PUNTO DRAW PAREN_ABRE PAREN_CIERRA
+    {: RESULT = new InvocacionDrawPreguntaEspecial(n, nuevaLista()); :}
+;
+
+componente ::=
+    componente_visual:c
+    {: RESULT = c; :}
 ;
 
 pregunta ::=
@@ -228,6 +250,10 @@ estructura_control ::=
 estructura_if ::=
     IF PAREN_ABRE expresion:c PAREN_CIERRA LLAVE_ABRE bloque_sentencias:tv LLAVE_CIERRA bloque_else:tf
     {: RESULT = new IfElse(c, tv, tf); :}
+  | IF PAREN_ABRE expresion:c1 PAREN_CIERRA LLAVE_ABRE bloque_sentencias:tv1 LLAVE_CIERRA ELSE IF PAREN_ABRE expresion:c2 PAREN_CIERRA LLAVE_ABRE bloque_sentencias:tv2 LLAVE_CIERRA
+    {: NodoAST nodoElseIf = new IfElse(c2, tv2, nuevaLista()); RESULT = new IfElse(c1, tv1, java.util.Collections.singletonList(nodoElseIf)); :}
+  | IF PAREN_ABRE expresion:c1 PAREN_CIERRA LLAVE_ABRE bloque_sentencias:tv1 LLAVE_CIERRA ELSE IF PAREN_ABRE expresion:c2 PAREN_CIERRA LLAVE_ABRE bloque_sentencias:tv2 LLAVE_CIERRA ELSE LLAVE_ABRE bloque_sentencias:tf LLAVE_CIERRA
+    {: NodoAST nodoElseIf = new IfElse(c2, tv2, tf); RESULT = new IfElse(c1, tv1, java.util.Collections.singletonList(nodoElseIf)); :}
 ;
 
 bloque_else ::=
@@ -339,7 +365,7 @@ atributo_tabla ::=
     {: RESULT = par("pointY", v); :}
   | ORIENTATION DOS_PUNTOS valor_orientacion:v
     {: RESULT = par("orientation", v); :}
-  | ELEMENTS DOS_PUNTOS LLAVE_ABRE lista_componentes:v LLAVE_CIERRA
+  | ELEMENTS DOS_PUNTOS LLAVE_ABRE lista_filas:v LLAVE_CIERRA
     {: RESULT = par("elements", v); :}
   | STYLES CORCHETE_ABRE lista_estilos:v CORCHETE_CIERRA
     {: RESULT = par("styles", v); :}
@@ -377,14 +403,30 @@ atributo_pregunta ::=
     {: RESULT = par("height", v); :}
   | LABEL DOS_PUNTOS expresion:v
     {: RESULT = par("label", v); :}
-  | OPTIONS DOS_PUNTOS LLAVE_ABRE lista_expresiones:v LLAVE_CIERRA
+  | atributo_opciones:o
+    {: RESULT = o; :}
+  | atributo_correct:c
+    {: RESULT = c; :}
+  | STYLES CORCHETE_ABRE lista_estilos:v CORCHETE_CIERRA
+    {: RESULT = par("styles", v); :}
+;
+
+atributo_opciones ::=
+    OPTIONS DOS_PUNTOS LLAVE_ABRE lista_expresiones:v LLAVE_CIERRA
     {: RESULT = par("options", v); :}
-  | CORRECT DOS_PUNTOS expresion:v
+  | OPTIONS DOS_PUNTOS WHO_IS_THAT_POKEMON PAREN_ABRE expresion:ini COMA expresion:fin PAREN_CIERRA
+    {: RESULT = par("options", invocacionPokemonOpciones(ini, fin)); :}
+  | OPTIONS DOS_PUNTOS WHO_IS_THAT_POKEMON PAREN_ABRE expresion:t COMA expresion:ini COMA expresion:fin PAREN_CIERRA
+    {: RESULT = par("options", new InvocacionPokemon(t, ini, fin)); :}
+  | OPTIONS DOS_PUNTOS WHO_IS_THAT_POKEMON PAREN_ABRE TIPO_NUMBER COMA expresion:ini COMA expresion:fin PAREN_CIERRA
+    {: RESULT = par("options", invocacionPokemonOpciones(ini, fin)); :}
+;
+
+atributo_correct ::=
+    CORRECT DOS_PUNTOS expresion:v
     {: RESULT = par("correct", v); :}
   | CORRECT DOS_PUNTOS LLAVE_ABRE lista_expresiones:v LLAVE_CIERRA
     {: RESULT = par("correct", v); :}
-  | STYLES CORCHETE_ABRE lista_estilos:v CORCHETE_CIERRA
-    {: RESULT = par("styles", v); :}
 ;
 
 lista_estilos ::=
@@ -403,8 +445,13 @@ atributo_estilo ::=
     {: RESULT = par("font family", v); :}
   | TEXT_SIZE DOS_PUNTOS expresion:v
     {: RESULT = par("text size", v); :}
-  | BORDER DOS_PUNTOS PAREN_ABRE expresion:g COMA tipo_borde:t COMA expresion:c PAREN_CIERRA
-    {: java.util.List valor = nuevaLista(); valor.add(g); valor.add(t); valor.add(c); RESULT = par("border", valor); :}
+  | BORDER DOS_PUNTOS tupla_borde:v
+    {: RESULT = par("border", v); :}
+;
+
+tupla_borde ::=
+    PAREN_ABRE expresion:a COMA expresion:b COMA expresion:c PAREN_CIERRA
+    {: java.util.List valor = nuevaLista(); valor.add(a); valor.add(b); valor.add(c); RESULT = valor; :}
 ;
 
 tipo_borde ::=
@@ -432,23 +479,47 @@ lista_componentes ::=
     {: RESULT = nuevaLista(); :}
 ;
 
+lista_filas ::=
+    lista_filas:lf COMA fila_tabla:f
+    {: lf.addAll(f); RESULT = lf; :}
+  | fila_tabla:f
+    {: java.util.List lista = nuevaLista(); lista.addAll(f); RESULT = lista; :}
+;
+
+fila_tabla ::=
+    CORCHETE_ABRE lista_celdas:lc CORCHETE_CIERRA
+    {: RESULT = lc; :}
+;
+
+lista_celdas ::=
+    lista_celdas:lc COMA celda:c
+    {: RESULT = agregarLista(lc, c); :}
+  | celda:c
+    {: java.util.List lista = nuevaLista(); lista.add(c); RESULT = lista; :}
+;
+
+celda ::=
+    LLAVE_ABRE componente:c LLAVE_CIERRA
+    {: RESULT = c; :}
+;
+
 lista_expresiones ::=
     lista_expresiones:le COMA expresion:e
     {: RESULT = agregarLista(le, e); :}
   | expresion:e
     {: java.util.List lista = nuevaLista(); lista.add(e); RESULT = lista; :}
-  |
-    {: RESULT = nuevaLista(); :}
+;
+
+lista_expresiones_no_vacia ::=
+    lista_expresiones_no_vacia:le COMA expresion:e
+    {: RESULT = agregarLista(le, e); :}
+  | expresion:e
+    {: java.util.List lista = nuevaLista(); lista.add(e); RESULT = lista; :}
 ;
 
 invocacion_pokemon ::=
     WHO_IS_THAT_POKEMON PAREN_ABRE expresion:t COMA expresion:ini COMA expresion:fin PAREN_CIERRA
     {: RESULT = new InvocacionPokemon(t, ini, fin); :}
-;
-
-invocacion_draw ::=
-    IDENTIFICADOR:n PUNTO DRAW PAREN_ABRE lista_expresiones:p PAREN_CIERRA
-    {: RESULT = new InvocacionDrawPreguntaEspecial(n, p); :}
 ;
 
 expresion ::=
@@ -485,10 +556,18 @@ expresion ::=
   | MENOS expresion:d
     {: RESULT = new Aritmetica("NEG", new Literal(0), d); :}
     %prec UMINUS
+  | PAREN_ABRE expresion:r COMA expresion:g COMA expresion:b PAREN_CIERRA
+    {: RESULT = construirColorTripleta("(", r, g, b, ")"); :}
+  | MENOR expresion:h COMA expresion:s COMA expresion:l MAYOR
+    {: RESULT = construirColorTripleta("<", h, s, l, ">"); :}
   | PAREN_ABRE expresion:e PAREN_CIERRA
     {: RESULT = e; :}
   | literal:l
     {: RESULT = l; :}
+  | COMODIN
+    {: RESULT = new Literal("?"); :}
+  | tipo_borde:t
+    {: RESULT = t; :}
   | IDENTIFICADOR:n
     {: RESULT = new Identificador(n); :}
   | invocacion_pokemon:i
@@ -518,6 +597,4 @@ literal ::=
     {: RESULT = new Literal("SANS_SERIF"); :}
   | CURSIVE
     {: RESULT = new Literal("CURSIVE"); :}
-  | COMODIN
-    {: RESULT = new Literal("?"); :}
 ;
