@@ -4,7 +4,7 @@
 
     <application
         android:allowBackup="true"
-        android:label="@string/app_name"
+        android:label="PKM_FORMS_EH"
         android:supportsRtl="true">
 
 

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+//import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -80,6 +81,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun EditorPantalla(
     navController: NavController,
+    onVolver: () -> Unit,
     onFormularioGenerado: (List<ComponenteFormulario>) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -102,7 +104,7 @@ fun EditorPantalla(
             TopAppBar(
                 title = { Text("PKM_FORMS_EH - Editor") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = onVolver) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Volver"
@@ -158,7 +160,7 @@ fun EditorPantalla(
                         )
                     }
                 ) {
-                    Text("Insertar Plantilla")
+                    Text("Plantilla")
                 }
 
                 OutlinedButton(
@@ -174,7 +176,7 @@ fun EditorPantalla(
                         )
                     }
                 ) {
-                    Text("Insertar Color")
+                    Text("Color")
                 }
 
                 OutlinedButton(
@@ -261,7 +263,8 @@ fun EditorPantalla(
 
             Row(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
+                    .weight(1f)
                     .background(Color(0xFF151515), RoundedCornerShape(12.dp))
                     .border(1.dp, Color(0xFF3A3A3A), RoundedCornerShape(12.dp))
                     .padding(10.dp)
@@ -284,28 +287,29 @@ fun EditorPantalla(
                     }
                 }
 
-                Box(
+                BasicTextField(
+                    value = codigoFuente,
+                    onValueChange = { codigoFuente = it },
                     modifier = Modifier
                         .padding(start = 10.dp)
-                        .fillMaxWidth()
-                ) {
-                    if (codigoFuente.text.isBlank()) {
-                        Text(
-                            text = "Escribe aquí el código PKM_FORMS...",
-                            color = Color(0xFF9E9E9E),
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 14.sp
-                        )
+                        .weight(1f),
+                    textStyle = estiloCodigo,
+                    cursorBrush = SolidColor(Color.White),
+                    visualTransformation = remember { ResaltadorSintaxisPkm() },
+                    decorationBox = { innerTextField ->
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            if (codigoFuente.text.isBlank()) {
+                                Text(
+                                    text = "Escribe aqui el código PKM_FORMS...",
+                                    color = Color(0xFF9E9E9E),
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 14.sp
+                                )
+                            }
+                            innerTextField()
+                        }
                     }
-                    BasicTextField(
-                        value = codigoFuente,
-                        onValueChange = { codigoFuente = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        textStyle = estiloCodigo,
-                        cursorBrush = SolidColor(Color.White),
-                        visualTransformation = remember { ResaltadorSintaxisPkm() }
-                    )
-                }
+                )
             }
 
             val (lineaCursor, colCursor) = obtenerPosicionCursor(codigoFuente)

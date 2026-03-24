@@ -47,6 +47,7 @@ import java.io.File
 @Composable
 fun ListaFormulariosPantalla(
     navController: NavController,
+    onVolver: () -> Unit,
     onAbrirFormulario: (List<ComponenteFormulario>) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -68,9 +69,9 @@ fun ListaFormulariosPantalla(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("PKM_FORMS_EH") },
+                title = { Text("PKM_FORMS_EH - Formularios") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = onVolver) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Volver"

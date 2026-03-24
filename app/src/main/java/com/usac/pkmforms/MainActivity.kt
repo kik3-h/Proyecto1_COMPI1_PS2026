@@ -9,13 +9,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
@@ -67,6 +71,7 @@ private fun NavegadorPantallas() {
         composable(RutasPantallas.EDITOR) {
             EditorPantalla(
                 navController = navController,
+                onVolver = { navController.popBackStack(RutasPantallas.INICIO, false) },
                 onFormularioGenerado = { componentes ->
                     componentesRender = componentes
                     navController.navigate(RutasPantallas.RENDER)
@@ -77,6 +82,7 @@ private fun NavegadorPantallas() {
         composable(RutasPantallas.LISTA_FORMULARIOS) {
             ListaFormulariosPantalla(
                 navController = navController,
+                onVolver = { navController.popBackStack(RutasPantallas.INICIO, false) },
                 onAbrirFormulario = { componentes ->
                     componentesRender = componentes
                     navController.navigate(RutasPantallas.RENDER)
@@ -94,22 +100,35 @@ private fun NavegadorPantallas() {
 }
 
 @Composable
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class) //para que funione agregue esto pq es experimental
 private fun PantallaInicio(
     onIrEditor: () -> Unit,
     onIrLista: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text("PKM_FORMS_EH")
-        Button(onClick = onIrEditor) {
-            Text("Abrir editor")
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("PKM_FORMS_EH", color = Color.White) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF1565C0),
+                    titleContentColor = Color.White
+                )
+            )
         }
-        Button(onClick = onIrLista) {
-            Text("Ver formularios guardados localmente")
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Button(onClick = onIrEditor) {
+                Text("Abrir editor")
+            }
+            Button(onClick = onIrLista) {
+                Text("Ver formularios guardados localmente")
+            }
         }
     }
 }
