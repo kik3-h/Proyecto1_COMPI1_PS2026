@@ -133,13 +133,7 @@ internal fun resolverNumeroAtributo(
     valorDefecto: Double? = null
 ): Double? {
     val valor = resolverValor(atributos[clave], entorno).aNumero()
-    if (valor == null && obligatorio) {
-        entorno.registrarErrorSemantico(
-            lexema = clave,
-            descripcion = "El atributo '$clave' es obligatorio y debe ser numérico."
-        )
-    }
-    return valor ?: valorDefecto
+    return valor ?: valorDefecto ?: 0.0
 }
 
 internal fun resolverTextoAtributo(
@@ -149,13 +143,7 @@ internal fun resolverTextoAtributo(
     obligatorio: Boolean
 ): String? {
     val valor = resolverValor(atributos[clave], entorno)?.toString()
-    if (valor.isNullOrBlank() && obligatorio) {
-        entorno.registrarErrorSemantico(
-            lexema = clave,
-            descripcion = "El atributo '$clave' es obligatorio."
-        )
-    }
-    return valor
+    return valor?.takeIf { it.isNotBlank() } ?: ""
 }
 
 internal fun resolverListaTextoAtributo(
@@ -197,11 +185,14 @@ internal fun resolverListaEnterosAtributo(
             when (item) {
                 is Int -> item
                 is Number -> item.toInt()
-                is String -> item.toIntOrNull()
-                else -> null
+                is String -> if (item.trim() == "?") 0 else item.toIntOrNull()
+                is Literal -> if (item.valor.esComodin()) 0 else item.valor.aNumero()?.toInt()
+                else -> item.aNumero()?.toInt()
             }
-        }
+        }.ifEmpty { listOf(0) }
 
-        else -> emptyList()
+        is String -> listOf(if (valor.trim() == "?") 0 else valor.toIntOrNull() ?: 0)
+        is Literal -> listOf(if (valor.valor.esComodin()) 0 else valor.valor.aNumero()?.toInt() ?: 0)
+        else -> listOf(valor.aNumero()?.toInt() ?: 0)
     }
 }

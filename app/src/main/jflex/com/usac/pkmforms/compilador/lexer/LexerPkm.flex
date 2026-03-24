@@ -91,7 +91,9 @@ ColorHsl = "<"{NumeroColor}","{NumeroColor}","{NumeroColor}">"
 "content"                                     { return simbolo(SimbolosSintacticosPkm.CONTENT); }
 "label"                                       { return simbolo(SimbolosSintacticosPkm.LABEL); }
 "options"                                     { return simbolo(SimbolosSintacticosPkm.OPTIONS); }
+"OPTIONS"                                     { return simbolo(SimbolosSintacticosPkm.OPTIONS); }
 "correct"                                     { return simbolo(SimbolosSintacticosPkm.CORRECT); }
+"CORRECT"                                     { return simbolo(SimbolosSintacticosPkm.CORRECT); }
 "MONO"                                        { return simbolo(SimbolosSintacticosPkm.MONO); }
 "SANS_SERIF"                                  { return simbolo(SimbolosSintacticosPkm.SANS_SERIF); }
 "CURSIVE"                                     { return simbolo(SimbolosSintacticosPkm.CURSIVE); }

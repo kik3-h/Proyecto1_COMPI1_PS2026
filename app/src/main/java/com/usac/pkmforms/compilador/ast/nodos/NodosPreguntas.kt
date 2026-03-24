@@ -43,6 +43,41 @@ private fun validarAtributosBasePregunta(atributos: Map<String, Any?>, entorno: 
     }
 }
 
+private fun esComodinCorrect(valor: Any?): Boolean {
+    return when (valor) {
+        is Literal -> valor.valor.esComodin()
+        is String -> valor.trim() == "?"
+        else -> false
+    }
+}
+
+private fun resolverIndiceCorrectoSeguro(valor: Any?): Int {
+    if (esComodinCorrect(valor)) return 0
+    return when (valor) {
+        is Int -> valor
+        is Number -> valor.toInt()
+        is String -> valor.toIntOrNull() ?: 0
+        else -> valor.aNumero()?.toInt() ?: 0
+    }
+}
+
+private fun resolverIndicesCorrectosSeguro(valor: Any?): List<Int> {
+    if (esComodinCorrect(valor)) return listOf(0)
+    return when (valor) {
+        is List<*> -> valor.mapNotNull {
+            when (it) {
+                is Int -> it
+                is Number -> it.toInt()
+                is String -> if (it.trim() == "?") 0 else it.toIntOrNull()
+                is Literal -> if (it.valor.esComodin()) 0 else it.valor.aNumero()?.toInt()
+                else -> it.aNumero()?.toInt()
+            }
+        }.ifEmpty { listOf(0) }
+
+        else -> listOf(resolverIndiceCorrectoSeguro(valor))
+    }
+}
+
 data class PreguntaAbierta(val atributos: Map<String, Any?>) : NodoPreguntaEspecial {
     override fun contarComodinesDeclarados(): Int = contarComodines(atributos)
 
@@ -94,13 +129,7 @@ data class PreguntaDesplegable(val atributos: Map<String, Any?>) : NodoPreguntaE
             )
         }
 
-        val correcto = resolverValor(atributos["correct"], entorno).aNumero()?.toInt()
-        if (correcto != null && opciones.isNotEmpty() && (correcto < 0 || correcto >= opciones.size)) {
-            entorno.registrarErrorSemantico(
-                lexema = "correct",
-                descripcion = "El índice 'correct' está fuera del rango de opciones."
-            )
-        }
+        resolverIndiceCorrectoSeguro(resolverValor(atributos["correct"], entorno))
         resolverEstilo(atributos, entorno)
         return Entorno.TipoVariablePkm.SPECIAL
     }
@@ -119,9 +148,9 @@ data class PreguntaDesplegable(val atributos: Map<String, Any?>) : NodoPreguntaE
                 ?: emptyList()
         }
         val correct = if (parametros.isEmpty()) {
-            resolverValor(atributos["correct"], entorno).aNumero()?.toInt()
+            resolverIndiceCorrectoSeguro(resolverValor(atributos["correct"], entorno))
         } else {
-            resolverConComodines(atributos, "correct", entorno, parametros, indiceParametro).aNumero()?.toInt()
+            resolverIndiceCorrectoSeguro(resolverConComodines(atributos, "correct", entorno, parametros, indiceParametro))
         }
 
         return PreguntaDesplegableFormulario(
@@ -154,13 +183,7 @@ data class PreguntaSeleccionUnica(val atributos: Map<String, Any?>) : NodoPregun
             )
         }
 
-        val correcto = resolverValor(atributos["correct"], entorno).aNumero()?.toInt()
-        if (correcto != null && opciones.isNotEmpty() && (correcto < 0 || correcto >= opciones.size)) {
-            entorno.registrarErrorSemantico(
-                lexema = "correct",
-                descripcion = "El índice 'correct' está fuera del rango de opciones."
-            )
-        }
+        resolverIndiceCorrectoSeguro(resolverValor(atributos["correct"], entorno))
         resolverEstilo(atributos, entorno)
         return Entorno.TipoVariablePkm.SPECIAL
     }
@@ -179,9 +202,9 @@ data class PreguntaSeleccionUnica(val atributos: Map<String, Any?>) : NodoPregun
                 ?: emptyList()
         }
         val correct = if (parametros.isEmpty()) {
-            resolverValor(atributos["correct"], entorno).aNumero()?.toInt()
+            resolverIndiceCorrectoSeguro(resolverValor(atributos["correct"], entorno))
         } else {
-            resolverConComodines(atributos, "correct", entorno, parametros, indiceParametro).aNumero()?.toInt()
+            resolverIndiceCorrectoSeguro(resolverConComodines(atributos, "correct", entorno, parametros, indiceParametro))
         }
 
         return PreguntaSeleccionUnicaFormulario(
@@ -208,14 +231,7 @@ data class PreguntaSeleccionMultiple(val atributos: Map<String, Any?>) : NodoPre
             )
         }
 
-        val indicesCorrectos = resolverListaEnterosAtributo(atributos, "correct", entorno)
-        val fueraRango = indicesCorrectos.any { it < 0 || it >= opciones.size }
-        if (fueraRango) {
-            entorno.registrarErrorSemantico(
-                lexema = "correct",
-                descripcion = "Uno o más índices de respuestas correctas están fuera de rango."
-            )
-        }
+        resolverIndicesCorrectosSeguro(resolverValor(atributos["correct"], entorno))
         resolverEstilo(atributos, entorno)
         return Entorno.TipoVariablePkm.SPECIAL
     }
@@ -234,16 +250,9 @@ data class PreguntaSeleccionMultiple(val atributos: Map<String, Any?>) : NodoPre
                 ?: emptyList()
         }
         val correct = if (parametros.isEmpty()) {
-            resolverListaEnterosAtributo(atributos, "correct", entorno)
+            resolverIndicesCorrectosSeguro(resolverValor(atributos["correct"], entorno))
         } else {
-            (resolverConComodines(atributos, "correct", entorno, parametros, indiceParametro) as? List<*>)?.mapNotNull {
-                when (it) {
-                    is Int -> it
-                    is Number -> it.toInt()
-                    is String -> it.toIntOrNull()
-                    else -> null
-                }
-            } ?: emptyList()
+            resolverIndicesCorrectosSeguro(resolverConComodines(atributos, "correct", entorno, parametros, indiceParametro))
         }
 
         return PreguntaSeleccionMultipleFormulario(

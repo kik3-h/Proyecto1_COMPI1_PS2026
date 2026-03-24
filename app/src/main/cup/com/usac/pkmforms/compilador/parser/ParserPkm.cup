@@ -56,9 +56,8 @@ parser code {:
     }
 
     @Override
-    public void unrecovered_syntax_error(Symbol tokenActual) {
-        syntax_error(tokenActual);
-        done_parsing();
+    public void unrecovered_syntax_error(Symbol tokenActual) throws java.lang.Exception {
+        /* Parche de inmunidad: no hacer nada */
     }
 :};
 
@@ -345,6 +344,8 @@ atributo_seccion ::=
     {: RESULT = par("elements", v); :}
   | STYLES CORCHETE_ABRE lista_estilos:v CORCHETE_CIERRA
     {: RESULT = par("styles", v); :}
+  | error
+    {: RESULT = par("error_ignorado", new Literal("error")); :}
 ;
 
 lista_atributos_tabla ::=
@@ -369,6 +370,8 @@ atributo_tabla ::=
     {: RESULT = par("elements", v); :}
   | STYLES CORCHETE_ABRE lista_estilos:v CORCHETE_CIERRA
     {: RESULT = par("styles", v); :}
+  | error
+    {: RESULT = par("error_ignorado", new Literal("error")); :}
 ;
 
 lista_atributos_texto ::=
@@ -409,6 +412,8 @@ atributo_pregunta ::=
     {: RESULT = c; :}
   | STYLES CORCHETE_ABRE lista_estilos:v CORCHETE_CIERRA
     {: RESULT = par("styles", v); :}
+  | error
+    {: RESULT = par("error_ignorado", new Literal("error")); :}
 ;
 
 atributo_opciones ::=
