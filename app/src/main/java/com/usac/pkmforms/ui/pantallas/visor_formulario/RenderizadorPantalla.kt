@@ -474,7 +474,7 @@ private fun RenderPreguntaSeleccionUnica(
 
     var opcionesDynamic by remember(clave) { mutableStateOf(pregunta.options) }
     LaunchedEffect(clave, pregunta.options) {
-        if (pregunta.options.isEmpty()) {
+        if (pregunta.options.isEmpty() || pregunta.options.contains("Opción API 1")) {
             val desdeCorrect = ((pregunta.correct ?: 0) + 1).coerceAtLeast(1)
             val hasta = (desdeCorrect + 4).coerceAtLeast(desdeCorrect)
             val opcionesApi = withContext(Dispatchers.IO) {
@@ -536,7 +536,7 @@ private fun RenderPreguntaSeleccionMultiple(
 
     var opcionesDynamic by remember(clave) { mutableStateOf(pregunta.options) }
     LaunchedEffect(clave, pregunta.options) {
-        if (pregunta.options.isEmpty()) {
+        if (pregunta.options.isEmpty() || pregunta.options.contains("Opción API 1")) {
             val desdeCorrect = (pregunta.correct.minOrNull()?.plus(1) ?: 1).coerceAtLeast(1)
             val hasta = (desdeCorrect + 4).coerceAtLeast(desdeCorrect)
             val opcionesApi = withContext(Dispatchers.IO) {
@@ -613,7 +613,7 @@ private fun RenderPreguntaDesplegable(
 
     var opcionesDynamic by remember(clave) { mutableStateOf(pregunta.options) }
     LaunchedEffect(clave, pregunta.options) {
-        if (pregunta.options.isEmpty()) {
+        if (pregunta.options.isEmpty() || pregunta.options.contains("Opción API 1")) {
             val desdeCorrect = ((pregunta.correct ?: 0) + 1).coerceAtLeast(1)
             val hasta = (desdeCorrect + 4).coerceAtLeast(desdeCorrect)
             val opcionesApi = withContext(Dispatchers.IO) {
