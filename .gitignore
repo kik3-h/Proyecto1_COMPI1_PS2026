@@ -19,3 +19,6 @@ app/build/
 
 .kotlin/
 
+# Excepción: permitir este APK
+!app-debug.apk
+
